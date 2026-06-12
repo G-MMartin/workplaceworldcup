@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WC2026 Admin Panel</title>
+  <style>
+    :root {
+      --primary:       #1a5cdb;
+      --primary-light: #3a76f5;
+      --primary-dark:  #0f3a9e;
+      --bg:            #05050f;
+      --surface:       #0c0e28;
+      --card:          #111435;
+      --border:        #1e2d7a;
+      --text:          #e4eaff;
+      --muted:         #7080b0;
+      --success:       #00e676;
+      --warning:       #ffab40;
+      --danger:        #ff4444;
+      --cat1:          #ffd700;
+      --cat2:          #c0c0c0;
+      --cat3:          #cd7f32;
+      --cat4:          #6bc5ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+    header {
+      background: linear-gradient(135deg, #0a1a5e, var(--primary));
+      padding: 18px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 2px solid var(--primary-light);
+    }
+    header h1 { font-size: 1.1rem; font-weight: 800; }
+    .admin-badge {
+      background: var(--warning);
+      color: #000;
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Login */
+    .login-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 80vh;
+      padding: 20px;
+    }
+    .login-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 32px 28px;
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+    }
+    .login-card h2 { font-size: 1.1rem; margin-bottom: 6px; }
+    .login-card p { color: var(--muted); font-size: 0.82rem; margin-bottom: 20px; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    .tab-btn {
+      padding: 14px 20px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .tab-btn.active { color: var(--text); border-bottom-color: var(--primary-light); }
+    .tab-btn:hover { color: var(--text); }
+
+    /* Content */
+    .tab-content { display: none; padding: 20px 16px; max-width: 640px; margin: 0 auto; }
+    .tab-content.active { display: block; }
+
+    /* Cards */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+    .card h3 { font-size: 0.88rem; font-weight: 700; color: var(--primary-light); margin-bottom: 14px; }
+
+    /* Form elements */
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 0.5px; }
+    .field input, .field select {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-size: 0.88rem;
+      padding: 10px 12px;
+      outline: none;
+    }
+    .field input:focus, .field select:focus { border-color: var(--primary-light); }
+    .field select option { background: #1a1a3a; }
+    .row { display: flex; gap: 10px; }
+    .row .field { flex: 1; }
+
+    /* Buttons */
+    .btn {
+      padding: 11px 18px;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-light); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-success { background: rgba(0,230,118,0.15); color: var(--success); border: 1px solid var(--success); }
+    .btn-danger  { background: rgba(255,68,68,0.12);  color: var(--danger);  border: 1px solid var(--danger); }
+    .btn-warning { background: rgba(255,171,64,0.15); color: var(--warning); border: 1px solid var(--warning); }
+    .btn-sm { padding: 6px 12px; font-size: 0.75rem; }
+    .btn-full { width: 100%; }
+
+    /* Alert */
+    .alert { padding: 10px 12px; border-radius: 7px; font-size: 0.82rem; margin-bottom: 12px; }
+    .alert-success { background: rgba(0,230,118,0.1);  border: 1px solid rgba(0,230,118,0.3); color: var(--success); }
+    .alert-danger  { background: rgba(255,68,68,0.12); border: 1px solid rgba(255,68,68,0.3); color: var(--danger); }
+    .alert-warning { background: rgba(255,171,64,0.1); border: 1px solid rgba(255,171,64,0.3); color: var(--warning); }
+    .hidden { display: none !important; }
+
+    /* Match list */
+    .match-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .match-teams { flex: 1; font-weight: 700; font-size: 0.88rem; min-width: 120px; }
+    .match-meta  { font-size: 0.72rem; color: var(--muted); }
+    .stage-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 3px 7px;
+      border-radius: 4px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .result-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .result-team1 { background: rgba(0,230,118,0.12); color: var(--success); border: 1px solid rgba(0,230,118,0.3); }
+    .result-draw  { background: rgba(255,171,64,0.12); color: var(--warning); border: 1px solid rgba(255,171,64,0.3); }
+    .result-team2 { background: rgba(107,197,255,0.12); color: var(--cat4); border: 1px solid rgba(107,197,255,0.3); }
+    .result-pending { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
+    .match-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    /* Player list */
+    .player-row {
+      display: flex;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      gap: 10px;
+    }
+    .player-row:last-child { border-bottom: none; }
+    .player-num { color: var(--muted); font-size: 0.75rem; width: 20px; }
+    .player-name { flex: 1; font-weight: 600; font-size: 0.88rem; }
+    .player-email { color: var(--muted); font-size: 0.75rem; }
+
+    /* Bonus team grid */
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 8px;
+    }
+    .team-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.78rem;
+    }
+    .team-item .team-name { font-weight: 700; margin-bottom: 6px; font-size: 0.82rem; }
+    .team-bonuses { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+    .bonus-tag {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255,171,64,0.15);
+      color: var(--warning);
+      border: 1px solid rgba(255,171,64,0.3);
+      cursor: pointer;
+    }
+    .bonus-tag:hover { background: rgba(255,68,68,0.2); color: var(--danger); }
+
+    /* Inline result form */
+    .result-form {
+      display: none;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+    .result-form.open { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .result-form select {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 0.8rem;
+      flex: 1;
+      min-width: 100px;
+    }
+    .result-form select option { background: #1a1a3a; }
+
+    /* Sections */
+    .section-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 16px 0 10px;
+    }
+    .empty-state { text-align: center; padding: 20px; color: var(--muted); font-size: 0.82rem; }
+
+    /* Loading */
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--primary-light);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>⚽ WC2026 Admin Panel</h1>
+  </div>
+  <span class="admin-badge">ADMIN</span>
+</header>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" class="login-wrap">
+  <div class="login-card">
+    <div style="font-size:2.5rem;margin-bottom:12px">🔐</div>
+    <h2>Admin Access</h2>
+    <p>Enter your admin password to continue</p>
+    <div class="field">
+      <input type="password" id="admin-pass" placeholder="Password" onkeydown="if(event.key==='Enter')login()">
+    </div>
+    <div id="login-err" class="alert alert-danger hidden"></div>
+    <button class="btn btn-primary btn-full" onclick="login()">Sign In</button>
+  </div>
+</div>
+
+<!-- MAIN PANEL -->
+<div id="main-panel" class="hidden">
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('matches')">⚽ Matches</button>
+    <button class="tab-btn" onclick="switchTab('bonuses')">🎁 Bonuses</button>
+    <button class="tab-btn" onclick="switchTab('players')">👥 Players</button>
+  </div>
+
+  <!-- ===== MATCHES TAB ===== -->
+  <div id="tab-matches" class="tab-content active">
+
+    <!-- Add match form -->
+    <div class="card">
+      <h3>➕ Add New Match</h3>
+      <div class="row">
+        <div class="field">
+          <label>Team 1</label>
+          <select id="m-team1">
+            <option value="">Select team...</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Team 2</label>
+          <select id="m-team2">
+            <option value="">Select team...</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Stage</label>
+          <select id="m-stage" onchange="toggleGroupField()">
+            <option value="Group">Group Stage</option>
+            <option value="R16">Round of 16</option>
+            <option value="QF">Quarter-Final</option>
+            <option value="SF">Semi-Final</option>
+            <option value="Final">Final</option>
+          </select>
+        </div>
+        <div class="field" id="group-field-wrap">
+          <label>Group</label>
+          <select id="m-group">
+            <option value="A">A</option><option value="B">B</option>
+            <option value="C">C</option><option value="D">D</option>
+            <option value="E">E</option><option value="F">F</option>
+            <option value="G">G</option><option value="H">H</option>
+            <option value="I">I</option><option value="J">J</option>
+            <option value="K">K</option><option value="L">L</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Date</label>
+          <input type="date" id="m-date">
+        </div>
+      </div>
+      <div id="add-match-msg" class="hidden"></div>
+      <button class="btn btn-primary" onclick="addMatch()">Add Match</button>
+    </div>
+
+    <!-- Match list -->
+    <div class="section-title">All Matches</div>
+    <div id="matches-loading" style="text-align:center;padding:20px;color:var(--muted)">
+      <span class="spinner"></span> Loading...
+    </div>
+    <div id="matches-list"></div>
+
+  </div>
+
+  <!-- ===== BONUSES TAB ===== -->
+  <div id="tab-bonuses" class="tab-content">
+
+    <div class="card">
+      <h3>🎁 Award Stage Bonuses</h3>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:16px">
+        Award bonuses after each knockout round. A team can only receive each stage bonus once.
+        <br><br>
+        <strong style="color:var(--text)">Bonus amounts:</strong> R16 +2 · QF +3 · SF +5 · Final +8 · Champion +12
+      </p>
+      <div class="row">
+        <div class="field">
+          <label>Team</label>
+          <select id="b-team">
+            <option value="">Select team...</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Stage Reached</label>
+          <select id="b-stage">
+            <option value="R16">Round of 16 (+2)</option>
+            <option value="QF">Quarter-Final (+3)</option>
+            <option value="SF">Semi-Final (+5)</option>
+            <option value="Final">Final (+8)</option>
+            <option value="Champion">Champion (+12)</option>
+          </select>
+        </div>
+      </div>
+      <div id="bonus-msg" class="hidden"></div>
+      <button class="btn btn-warning" onclick="awardBonus()">Award Bonus</button>
+    </div>
+
+    <!-- Awarded bonuses -->
+    <div class="section-title">Awarded Bonuses</div>
+    <div id="bonuses-loading" style="text-align:center;padding:20px;color:var(--muted)">
+      <span class="spinner"></span> Loading...
+    </div>
+    <div id="bonuses-list"></div>
+
+  </div>
+
+  <!-- ===== PLAYERS TAB ===== -->
+  <div id="tab-players" class="tab-content">
+    <div class="card">
+      <h3>👥 Registered Players</h3>
+      <div id="players-loading" style="text-align:center;padding:20px;color:var(--muted)">
+        <span class="spinner"></span> Loading...
+      </div>
+      <div id="players-list"></div>
+    </div>
+  </div>
+
+</div><!-- /main-panel -->
+
+<script>
+// ================================================================
+// CONFIG — Replace with your deployed Apps Script URL
+// ================================================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbyO0bUHn03KKOAcAni4OJLDIIncAODvl6Qj5xlIK9ryQcij4jPpjhMwhA8Vhieu-m5z/exec';
+
+const ALL_TEAMS = [
+  'Argentina','France','Spain','England','Brazil','Portugal','Belgium','Netherlands',
+  'Germany','Uruguay','Colombia','USA','Mexico','Japan','Morocco','Switzerland',
+  'Senegal','Korea Republic','Ecuador','Canada','Croatia','Australia','Norway','Ghana',
+  'Algeria','Austria',"Cote d'Ivoire",'Tunisia','Qatar','Saudi Arabia','Egypt','IR Iran',
+  'Paraguay','South Africa','Panama','Uzbekistan','Scotland','New Zealand','Jordan',
+  'Curaçao','Cabo Verde','Haiti',
+  'Winner Play-Off A','Winner Play-Off B','Winner Play-Off C','Winner Play-Off D',
+  'Winner Play-Off 1','Winner Play-Off 2'
+];
+
+let adminPassword = '';
+let matchesCache  = [];
+let bonusesCache  = [];
+
+// ---- LOGIN ----
+function login() {
+  const pw = document.getElementById('admin-pass').value;
+  if (!pw) return;
+  adminPassword = pw;
+
+  // Quick auth test via players fetch
+  fetch(`${API_URL}?action=get_players&password=${encodeURIComponent(pw)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.error === 'Unauthorized') {
+        document.getElementById('login-err').textContent = 'Wrong password.';
+        document.getElementById('login-err').classList.remove('hidden');
+        adminPassword = '';
+      } else {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('main-panel').classList.remove('hidden');
+        populateTeamSelects();
+        loadAll();
+      }
+    })
+    .catch(() => {
+      document.getElementById('login-err').textContent = 'Connection error. Try again.';
+      document.getElementById('login-err').classList.remove('hidden');
+    });
+}
+
+// ---- POPULATE SELECTS ----
+function populateTeamSelects() {
+  ['m-team1','m-team2','b-team'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">Select team...</option>';
+    ALL_TEAMS.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t; opt.textContent = t;
+      sel.appendChild(opt);
+    });
+  });
+  // Default today's date
+  document.getElementById('m-date').value = new Date().toISOString().split('T')[0];
+}
+
+function toggleGroupField() {
+  const stage = document.getElementById('m-stage').value;
+  document.getElementById('group-field-wrap').style.display = stage === 'Group' ? '' : 'none';
+}
+
+// ---- TABS ----
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  if (tab === 'players') loadPlayers();
+  if (tab === 'bonuses') loadBonuses();
+}
+
+// ---- LOAD ALL ----
+function loadAll() {
+  loadMatches();
+  loadBonuses();
+  loadPlayers();
+}
+
+// ---- MATCHES ----
+async function loadMatches() {
+  try {
+    const res  = await fetch(`${API_URL}?action=get_matches`);
+    const data = await res.json();
+    matchesCache = data.matches || [];
+    renderMatches();
+  } catch (e) {
+    document.getElementById('matches-list').innerHTML =
+      '<div class="empty-state" style="color:var(--danger)">Failed to load matches.</div>';
+  }
+  document.getElementById('matches-loading').classList.add('hidden');
+}
+
+function renderMatches() {
+  const list = document.getElementById('matches-list');
+  if (matchesCache.length === 0) {
+    list.innerHTML = '<div class="empty-state">No matches added yet.</div>';
+    return;
+  }
+
+  // Group by stage
+  const stages = ['Group','R16','QF','SF','Final'];
+  let html = '';
+  stages.forEach(stage => {
+    const stageMatches = matchesCache.filter(m => m.Stage === stage);
+    if (stageMatches.length === 0) return;
+    html += `<div class="section-title">${stageLabel(stage)}</div>`;
+    stageMatches.forEach(m => {
+      const resultLabel = resultBadge(m.Result, m.Team1, m.Team2);
+      html += `
+        <div class="match-item" id="match-${m.MatchID}">
+          <div>
+            <div class="match-teams">${esc(m.Team1)} vs ${esc(m.Team2)}</div>
+            <div class="match-meta">${m.Date || ''} ${m.Group ? '· Grp '+m.Group : ''}</div>
+          </div>
+          <span class="stage-badge">${stage}</span>
+          ${resultLabel}
+          <div class="match-actions">
+            <button class="btn btn-warning btn-sm" onclick="openResultForm('${m.MatchID}')">Enter Result</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteMatch('${m.MatchID}')">✕</button>
+          </div>
+          <div class="result-form" id="rf-${m.MatchID}">
+            <select id="rsel-${m.MatchID}">
+              <option value="">— Select Result —</option>
+              <option value="team1">${esc(m.Team1)} Wins</option>
+              <option value="draw">Draw</option>
+              <option value="team2">${esc(m.Team2)} Wins</option>
+            </select>
+            <button class="btn btn-success btn-sm" onclick="saveResult('${m.MatchID}')">Save</button>
+            <button class="btn btn-sm" style="background:var(--surface);color:var(--muted)" onclick="closeResultForm('${m.MatchID}')">Cancel</button>
+          </div>
+        </div>`;
+    });
+  });
+  list.innerHTML = html;
+}
+
+function resultBadge(result, team1, team2) {
+  if (!result) return '<span class="result-badge result-pending">Pending</span>';
+  if (result === 'draw')  return '<span class="result-badge result-draw">Draw</span>';
+  if (result === 'team1') return `<span class="result-badge result-team1">${esc(team1)} Won</span>`;
+  if (result === 'team2') return `<span class="result-badge result-team2">${esc(team2)} Won</span>`;
+  return '';
+}
+
+function stageLabel(s) {
+  const labels = {Group:'Group Stage',R16:'Round of 16',QF:'Quarter-Finals',SF:'Semi-Finals',Final:'Final'};
+  return labels[s] || s;
+}
+
+function openResultForm(id) {
+  document.querySelectorAll('.result-form').forEach(f => f.classList.remove('open'));
+  document.getElementById(`rf-${id}`).classList.add('open');
+}
+function closeResultForm(id) {
+  document.getElementById(`rf-${id}`).classList.remove('open');
+}
+
+async function saveResult(matchId) {
+  const sel    = document.getElementById(`rsel-${matchId}`);
+  const result = sel.value;
+  if (!result) { alert('Please select a result.'); return; }
+
+  try {
+    const res  = await apiFetch({ action:'update_match', matchId, result });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Result saved ✓', 'success');
+      loadMatches();
+    } else {
+      showToast(data.error || 'Error saving.', 'danger');
+    }
+  } catch (e) { showToast('Connection error.', 'danger'); }
+}
+
+async function addMatch() {
+  const team1 = document.getElementById('m-team1').value;
+  const team2 = document.getElementById('m-team2').value;
+  const stage = document.getElementById('m-stage').value;
+  const group = document.getElementById('m-group').value;
+  const date  = document.getElementById('m-date').value;
+  const msgEl = document.getElementById('add-match-msg');
+
+  if (!team1 || !team2) { showMsg(msgEl, 'Select both teams.', 'danger'); return; }
+  if (team1 === team2)  { showMsg(msgEl, 'Teams must be different.', 'danger'); return; }
+
+  try {
+    const res  = await apiFetch({ action:'add_match', team1, team2, stage, group, date });
+    const data = await res.json();
+    if (data.success) {
+      showMsg(msgEl, `Match added (${team1} vs ${team2}).`, 'success');
+      loadMatches();
+    } else {
+      showMsg(msgEl, data.error || 'Error adding match.', 'danger');
+    }
+  } catch (e) { showMsg(msgEl, 'Connection error.', 'danger'); }
+}
+
+async function deleteMatch(matchId) {
+  if (!confirm('Delete this match?')) return;
+  try {
+    const res  = await apiFetch({ action:'delete_match', matchId });
+    const data = await res.json();
+    if (data.success) { showToast('Match deleted.', 'success'); loadMatches(); }
+    else showToast(data.error || 'Error.', 'danger');
+  } catch (e) { showToast('Connection error.', 'danger'); }
+}
+
+// ---- BONUSES ----
+async function loadBonuses() {
+  document.getElementById('bonuses-loading').classList.remove('hidden');
+  try {
+    const res  = await fetch(`${API_URL}?action=get_bonuses&password=${encodeURIComponent(adminPassword)}`);
+    const data = await res.json();
+    bonusesCache = data.bonuses || [];
+    renderBonuses();
+  } catch (e) {
+    document.getElementById('bonuses-list').innerHTML =
+      '<div class="empty-state" style="color:var(--danger)">Failed to load bonuses.</div>';
+  }
+  document.getElementById('bonuses-loading').classList.add('hidden');
+}
+
+function renderBonuses() {
+  const list = document.getElementById('bonuses-list');
+  if (bonusesCache.length === 0) {
+    list.innerHTML = '<div class="empty-state">No bonuses awarded yet.</div>';
+    return;
+  }
+
+  // Group by team
+  const byTeam = {};
+  bonusesCache.forEach(b => {
+    if (!byTeam[b.Team]) byTeam[b.Team] = [];
+    byTeam[b.Team].push(b);
+  });
+
+  let html = '<div class="team-grid">';
+  Object.entries(byTeam).forEach(([team, bonuses]) => {
+    const total = bonuses.reduce((s, b) => s + Number(b.Points), 0);
+    html += `
+      <div class="team-item">
+        <div class="team-name">${esc(team)}</div>
+        <div class="team-bonuses">
+          ${bonuses.map(b => `
+            <span class="bonus-tag" title="Click to revoke" onclick="revokeBonus('${esc(team)}','${b.Stage}')">
+              ${b.Stage} +${b.Points} ✕
+            </span>`).join('')}
+        </div>
+        <div style="font-size:0.72rem;color:var(--warning)">Total: +${total}pts</div>
+      </div>`;
+  });
+  html += '</div>';
+  list.innerHTML = html;
+}
+
+async function awardBonus() {
+  const team  = document.getElementById('b-team').value;
+  const stage = document.getElementById('b-stage').value;
+  const msgEl = document.getElementById('bonus-msg');
+  if (!team) { showMsg(msgEl, 'Please select a team.', 'danger'); return; }
+
+  try {
+    const res  = await apiFetch({ action:'award_bonus', team, stage });
+    const data = await res.json();
+    if (data.success) {
+      showMsg(msgEl, data.message || 'Bonus awarded!', 'success');
+      loadBonuses();
+    } else {
+      showMsg(msgEl, data.error || 'Error.', 'warning');
+    }
+  } catch (e) { showMsg(msgEl, 'Connection error.', 'danger'); }
+}
+
+async function revokeBonus(team, stage) {
+  if (!confirm(`Revoke ${stage} bonus for ${team}?`)) return;
+  try {
+    const res  = await apiFetch({ action:'revoke_bonus', team, stage });
+    const data = await res.json();
+    if (data.success) { showToast('Bonus revoked.', 'success'); loadBonuses(); }
+    else showToast(data.error || 'Error.', 'danger');
+  } catch (e) { showToast('Connection error.', 'danger'); }
+}
+
+// ---- PLAYERS ----
+async function loadPlayers() {
+  document.getElementById('players-loading').classList.remove('hidden');
+  try {
+    const res  = await fetch(`${API_URL}?action=get_players&password=${encodeURIComponent(adminPassword)}`);
+    const data = await res.json();
+    renderPlayers(data.players || []);
+  } catch (e) {
+    document.getElementById('players-list').innerHTML =
+      '<div class="empty-state" style="color:var(--danger)">Failed to load players.</div>';
+  }
+  document.getElementById('players-loading').classList.add('hidden');
+}
+
+function renderPlayers(players) {
+  const list = document.getElementById('players-list');
+  if (players.length === 0) {
+    list.innerHTML = '<div class="empty-state">No players registered yet.</div>';
+    return;
+  }
+  list.innerHTML = players.map((p, i) => `
+    <div class="player-row">
+      <div class="player-num">${i + 1}</div>
+      <div class="player-name">${esc(p.Name)}</div>
+      <div class="player-email">${esc(p.Email)}</div>
+    </div>`).join('');
+}
+
+// ---- HELPERS ----
+function apiFetch(body) {
+  return fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ ...body, password: adminPassword })
+  });
+}
+
+function showMsg(el, msg, type) {
+  el.textContent = msg;
+  el.className = `alert alert-${type}`;
+  el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), 5000);
+}
+
+function showToast(msg, type) {
+  const t = document.createElement('div');
+  t.className = `alert alert-${type}`;
+  t.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:999;min-width:200px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.5)';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ---- KEY LISTENERS ----
+document.getElementById('admin-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') login();
+});
+</script>
+</body>
+</html>

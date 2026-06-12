@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WC2026 Workplace Game — Leaderboard</title>
+  <style>
+    :root {
+      --primary:       #1a5cdb;
+      --primary-light: #3a76f5;
+      --primary-dark:  #0f3a9e;
+      --bg:            #05050f;
+      --surface:       #0c0e28;
+      --card:          #111435;
+      --border:        #1e2d7a;
+      --text:          #e4eaff;
+      --muted:         #7080b0;
+      --success:       #00e676;
+      --warning:       #ffab40;
+      --danger:        #ff4444;
+      --gold:          #ffd700;
+      --silver:        #c0c0c0;
+      --bronze:        #cd7f32;
+      --cat1:          #ffd700;
+      --cat2:          #c0c0c0;
+      --cat3:          #cd7f32;
+      --cat4:          #6bc5ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    header {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 60%, #1a3a8f 100%);
+      padding: 22px 20px 18px;
+      text-align: center;
+      border-bottom: 2px solid var(--primary-light);
+      position: relative;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 800; letter-spacing: 1px; }
+    header .subtitle { color: rgba(255,255,255,0.7); font-size: 0.8rem; margin-top: 4px; }
+    .refresh-btn {
+      position: absolute;
+      right: 16px; top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .refresh-btn:hover { background: rgba(255,255,255,0.2); }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      padding: 14px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8rem;
+      flex-wrap: wrap;
+    }
+    .stat-item { color: var(--muted); }
+    .stat-item span { color: var(--text); font-weight: 700; }
+
+    /* Main container */
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px 14px 40px;
+    }
+
+    /* Podium top 3 */
+    .podium {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 8px;
+      margin-bottom: 24px;
+      padding: 16px 0;
+    }
+    .podium-item {
+      flex: 1;
+      max-width: 140px;
+      text-align: center;
+    }
+    .podium-crown { font-size: 1.5rem; margin-bottom: 4px; }
+    .podium-name {
+      font-size: 0.78rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 0 4px;
+    }
+    .podium-pts { font-size: 0.7rem; color: var(--muted); margin: 2px 0 8px; }
+    .podium-block {
+      border-radius: 8px 8px 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: rgba(0,0,0,0.5);
+    }
+    .podium-1 .podium-block { height: 70px; background: var(--gold); }
+    .podium-2 .podium-block { height: 50px; background: var(--silver); }
+    .podium-3 .podium-block { height: 36px; background: var(--bronze); }
+
+    /* Leaderboard list */
+    .lb-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 8px;
+      transition: border-color 0.2s;
+      cursor: pointer;
+    }
+    .lb-card:hover { border-color: var(--primary); }
+    .lb-card.expanded { border-color: var(--primary-light); }
+    .lb-row {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      gap: 12px;
+    }
+    .lb-rank {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.8rem;
+      flex-shrink: 0;
+    }
+    .rank-1 { background: var(--gold);   border-color: var(--gold);   color: #000; }
+    .rank-2 { background: var(--silver); border-color: var(--silver); color: #000; }
+    .rank-3 { background: var(--bronze); border-color: var(--bronze); color: #000; }
+    .lb-name {
+      flex: 1;
+      font-weight: 700;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .lb-pts-col { text-align: right; }
+    .lb-total { font-size: 1.1rem; font-weight: 800; color: var(--primary-light); }
+    .lb-breakdown { font-size: 0.7rem; color: var(--muted); }
+    .lb-expand { color: var(--muted); font-size: 0.8rem; margin-left: 4px; }
+
+    /* Picks expand panel */
+    .picks-panel {
+      display: none;
+      border-top: 1px solid var(--border);
+      padding: 12px 16px;
+      background: var(--surface);
+    }
+    .picks-panel.open { display: block; }
+    .picks-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .picks-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .pick-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 8px;
+      font-size: 0.72rem;
+    }
+    .pick-group { color: var(--primary-light); font-weight: 700; font-size: 0.65rem; margin-bottom: 2px; }
+    .pick-team { font-weight: 600; font-size: 0.76rem; line-height: 1.2; }
+    .cat-badge {
+      display: inline-block;
+      font-size: 0.6rem;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 3px;
+      margin-top: 2px;
+    }
+    .cat-1 { background: rgba(255,215,0,0.15); color: var(--cat1); }
+    .cat-2 { background: rgba(192,192,192,0.15); color: var(--cat2); }
+    .cat-3 { background: rgba(205,127,50,0.15); color: var(--cat3); }
+    .cat-4 { background: rgba(107,197,255,0.15); color: var(--cat4); }
+
+    /* Loading / Empty */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+    }
+    .loading-spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty { text-align: center; padding: 30px; color: var(--muted); font-size: 0.88rem; }
+
+    /* Bonus legend */
+    .bonus-legend {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
+      font-size: 0.78rem;
+    }
+    .bonus-legend h3 { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .bonus-items { display: flex; flex-wrap: wrap; gap: 8px; }
+    .bonus-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 10px;
+      color: var(--warning);
+      font-weight: 700;
+    }
+    .bonus-item span { color: var(--muted); font-weight: 400; }
+
+    /* Auto-refresh indicator */
+    .refresh-info {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--muted);
+      padding: 10px 0 0;
+    }
+    .pulse { color: var(--success); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🏆 WC2026 LEADERBOARD</h1>
+  <p class="subtitle">Workplace Prediction Game</p>
+  <button class="refresh-btn" onclick="loadLeaderboard()">↻ Refresh</button>
+</header>
+
+<div class="stats-bar">
+  <div class="stat-item">Players: <span id="stat-players">—</span></div>
+  <div class="stat-item">Last Updated: <span id="stat-updated">—</span></div>
+</div>
+
+<div class="container">
+
+  <!-- Scoring legend -->
+  <div class="bonus-legend">
+    <h3>🎯 Scoring Guide</h3>
+    <div class="bonus-items">
+      <div class="bonus-item">CAT 1 <span>Win=1pt</span></div>
+      <div class="bonus-item">CAT 2 <span>Win=2pts</span></div>
+      <div class="bonus-item">CAT 3 <span>Win=3pts</span></div>
+      <div class="bonus-item">CAT 4 <span>Win=4pts</span></div>
+      <div class="bonus-item">Draw <span>=½pts</span></div>
+      <div class="bonus-item">R16 <span>+2 bonus</span></div>
+      <div class="bonus-item">QF <span>+3 bonus</span></div>
+      <div class="bonus-item">SF <span>+5 bonus</span></div>
+      <div class="bonus-item">Final <span>+8 bonus</span></div>
+      <div class="bonus-item">🏆 Champ <span>+12 bonus</span></div>
+    </div>
+  </div>
+
+  <!-- Podium (top 3) -->
+  <div id="podium" class="podium hidden"></div>
+
+  <!-- Loading -->
+  <div id="loading" class="loading">
+    <div class="loading-spinner"></div>
+    <div>Loading standings...</div>
+  </div>
+
+  <!-- Empty state -->
+  <div id="empty" class="empty hidden">
+    No players registered yet. Be the first! 🚀
+  </div>
+
+  <!-- Leaderboard -->
+  <div id="leaderboard-list"></div>
+
+  <div class="refresh-info">
+    <span class="pulse">●</span> Auto-refreshes every 3 minutes
+  </div>
+
+</div>
+
+<script>
+// ================================================================
+// CONFIG — Replace with your deployed Apps Script URL
+// ================================================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbyO0bUHn03KKOAcAni4OJLDIIncAODvl6Qj5xlIK9ryQcij4jPpjhMwhA8Vhieu-m5z/exec';
+
+const CAT_MAP = {
+  'Argentina':1,'France':1,'Spain':1,'England':1,'Brazil':1,'Portugal':1,
+  'Belgium':1,'Netherlands':1,'Germany':1,'Uruguay':1,'Colombia':1,'USA':1,
+  'Mexico':2,'Japan':2,'Morocco':2,'Switzerland':2,'Senegal':2,'Korea Republic':2,
+  'Ecuador':2,'Canada':2,'Croatia':2,'Australia':2,'Norway':2,'Ghana':2,'Sweden':2,
+  "Algeria":3,"Austria":3,"Côte d'Ivoire":3,"Tunisia":3,"Qatar":3,
+  "Saudi Arabia":3,"Egypt":3,"IR Iran":3,"Paraguay":3,"South Africa":3,
+  "Panama":3,"Uzbekistan":3,"Czechia":3,"Bosnia and Herzegovina":3,
+  "Türkiye":3,"Congo DR":3,
+  "Scotland":4,"New Zealand":4,"Jordan":4,"Curaçao":4,"Cabo Verde":4,
+  "Haiti":4,"Iraq":4
+};
+
+const GROUP_KEYS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+
+async function loadLeaderboard() {
+  document.getElementById('loading').classList.remove('hidden');
+  document.getElementById('leaderboard-list').innerHTML = '';
+  document.getElementById('podium').classList.add('hidden');
+  document.getElementById('empty').classList.add('hidden');
+
+  try {
+    const res  = await fetch(`${API_URL}?action=leaderboard`);
+    const data = await res.json();
+    renderLeaderboard(data);
+  } catch (e) {
+    document.getElementById('loading').innerHTML =
+      '<div style="color:var(--danger)">⚠️ Could not load data. Check connection.</div>';
+  }
+}
+
+function renderLeaderboard(data) {
+  document.getElementById('loading').classList.add('hidden');
+  const lb = data.leaderboard || [];
+
+  document.getElementById('stat-players').textContent = lb.length;
+  if (data.lastUpdated) {
+    const d = new Date(data.lastUpdated);
+    document.getElementById('stat-updated').textContent =
+      d.toLocaleTimeString('en-KE', {hour:'2-digit',minute:'2-digit'});
+  }
+
+  if (lb.length === 0) {
+    document.getElementById('empty').classList.remove('hidden');
+    return;
+  }
+
+  // Podium (top 3)
+  if (lb.length >= 2) {
+    const podium = document.getElementById('podium');
+    podium.classList.remove('hidden');
+    const medals = [
+      {rank:1,crown:'🥇',cls:'podium-1',icon:'1'},
+      {rank:2,crown:'🥈',cls:'podium-2',icon:'2'},
+      {rank:3,crown:'🥉',cls:'podium-3',icon:'3'}
+    ];
+    const order = lb.length >= 3 ? [1,0,2] : [1,0]; // 2nd, 1st, 3rd layout
+    podium.innerHTML = order.map(i => {
+      if (!lb[i]) return '';
+      const m = medals[i];
+      return `
+        <div class="podium-item ${m.cls}">
+          <div class="podium-crown">${m.crown}</div>
+          <div class="podium-name">${escHtml(lb[i].name)}</div>
+          <div class="podium-pts">${lb[i].total} pts</div>
+          <div class="podium-block">${m.icon}</div>
+        </div>`;
+    }).join('');
+  }
+
+  // Full list
+  const list = document.getElementById('leaderboard-list');
+  list.innerHTML = '';
+  lb.forEach((player, idx) => {
+    const rank = idx + 1;
+    const rankClass = rank <= 3 ? `rank-${rank}` : '';
+    const card = document.createElement('div');
+    card.className = 'lb-card';
+    card.innerHTML = `
+      <div class="lb-row" onclick="togglePicks(this)">
+        <div class="lb-rank ${rankClass}">${rank}</div>
+        <div class="lb-name">${escHtml(player.name)}</div>
+        <div class="lb-pts-col">
+          <div class="lb-total">${player.total} pts</div>
+          <div class="lb-breakdown">⚽ ${player.matchPoints} + 🎁 ${player.bonusPoints}</div>
+        </div>
+        <div class="lb-expand">▾</div>
+      </div>
+      <div class="picks-panel">
+        <div class="picks-title">Picked Teams</div>
+        <div class="picks-grid">
+          ${GROUP_KEYS.map(g => {
+            const team = player.picks[g] || '—';
+            const cat  = CAT_MAP[team] || '?';
+            return `
+              <div class="pick-item">
+                <div class="pick-group">GRP ${g}</div>
+                <div class="pick-team">${escHtml(team)}</div>
+                <span class="cat-badge cat-${cat}">CAT ${cat}</span>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+function togglePicks(row) {
+  const card  = row.closest('.lb-card');
+  const panel = card.querySelector('.picks-panel');
+  const arrow = card.querySelector('.lb-expand');
+  const open  = panel.classList.toggle('open');
+  card.classList.toggle('expanded', open);
+  arrow.textContent = open ? '▴' : '▾';
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Load on start and auto-refresh every 3 minutes
+loadLeaderboard();
+setInterval(loadLeaderboard, 3 * 60 * 1000);
+</script>
+</body>
+</html>
