@@ -452,6 +452,20 @@ async function loadMatches() {
   document.getElementById('matches-loading').classList.add('hidden');
 }
 
+function formatDateLabel(dateStr) {
+  try {
+    // Handle YYYY-MM-DD format safely without timezone shift
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      const [y,m,d] = dateStr.split('-').map(Number);
+      const dt = new Date(y, m-1, d);
+      return dt.toLocaleDateString('en-KE',{weekday:'short',day:'numeric',month:'long',year:'numeric'});
+    }
+    const dt = new Date(dateStr);
+    if (isNaN(dt.getTime())) return dateStr;
+    return dt.toLocaleDateString('en-KE',{weekday:'short',day:'numeric',month:'long',year:'numeric'});
+  } catch(e) { return dateStr; }
+}
+
 function renderMatches() {
   const list = document.getElementById('matches-list');
   if (!matchesCache.length) { list.innerHTML = '<div class="empty-state">No matches yet.</div>'; return; }
@@ -469,9 +483,7 @@ function renderMatches() {
 
   sortedDates.forEach(date => {
     const ms       = byDate[date];
-    const dateLabel = date !== 'Unknown Date'
-      ? new Date(date + 'T12:00:00').toLocaleDateString('en-KE',{weekday:'short',day:'numeric',month:'long',year:'numeric'})
-      : 'Unknown Date';
+    const dateLabel = date !== 'Unknown Date' ? formatDateLabel(date) : 'Unknown Date';
     html += `<div class="section-title">📅 ${dateLabel} <span style="color:var(--primary-light);font-weight:800">(${ms.length})</span></div>`;
     ms.forEach(m => {
       html += `
