@@ -391,10 +391,9 @@
               <th>Team</th>
               <th class="num">Grp</th>
               <th class="num">P</th>
-              <th class="num">W</th>
-              <th class="num">D</th>
-              <th class="num">L</th>
-              <th class="num">GD</th>
+              <th class="num" style="color:var(--success)">W</th>
+              <th class="num" style="color:var(--warning)">D</th>
+              <th class="num" style="color:var(--danger)">L</th>
               <th class="num">Pts</th>
             </tr>
           </thead>
@@ -428,14 +427,13 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbyO0bUHn03KKOAcAni4OJLD
 
 const CAT_MAP = {
   'Argentina':1,'France':1,'Spain':1,'England':1,'Brazil':1,'Portugal':1,
-  'Belgium':1,'Netherlands':1,'Germany':1,'Morocco':1,'Croatia':1,'Colombia':1,
-  'Mexico':2,'Japan':2,'Senegal':2,'Uruguay':2,'USA':2,'Switzerland':2,
-  'Iran':2,'IR Iran':2,'Türkiye':2,'Ecuador':2,'Austria':2,'Korea Republic':2,'Australia':2,
-  'Sweden':3,'Canada':3,'Norway':3,"Côte d'Ivoire":3,"Algeria":3,"Tunisia":3,
-  "Egypt":3,"Paraguay":3,"Panama":3,"Scotland":3,"Czechia":3,"Congo DR":3,
-  "Uzbekistan":4,"Qatar":4,"Iraq":4,"South Africa":4,"Saudi Arabia":4,
-  "Jordan":4,"Bosnia and Herzegovina":4,"Cabo Verde":4,"Ghana":4,
-  "Haiti":4,"Curaçao":4,"New Zealand":4
+  'Belgium':1,'Netherlands':1,'Germany':1,'Uruguay':1,'Colombia':1,'USA':1,
+  'Mexico':2,'Japan':2,'Morocco':2,'Switzerland':2,'Senegal':2,'Korea Republic':2,
+  'Ecuador':2,'Canada':2,'Croatia':2,'Australia':2,'Norway':2,'Ghana':2,'Sweden':2,
+  "Algeria":3,"Austria":3,"Côte d'Ivoire":3,"Tunisia":3,"Qatar":3,"Saudi Arabia":3,
+  "Egypt":3,"IR Iran":3,"Paraguay":3,"South Africa":3,"Panama":3,"Uzbekistan":3,
+  "Czechia":3,"Bosnia and Herzegovina":3,"Türkiye":3,"Congo DR":3,
+  "Scotland":4,"New Zealand":4,"Jordan":4,"Curaçao":4,"Cabo Verde":4,"Haiti":4,"Iraq":4
 };
 
 const GROUP_KEYS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
@@ -541,12 +539,16 @@ async function loadBracket() {
   try {
     const res  = await fetch(API_URL + '?action=get_tournament');
     const data = await res.json();
-    if (data.error) throw new Error(data.error);
+    if (data.error) {
+      document.getElementById('tournament-loading').innerHTML =
+        '<div style="color:var(--danger);padding:20px;font-size:0.8rem">⚠️ API Error:<br><code style="color:var(--warning);font-size:0.7rem">' + data.error + '</code><br><br><button onclick="tournamentLoaded=false;loadBracket()" style="margin-top:10px;padding:8px 16px;background:var(--primary);border:none;color:#fff;border-radius:7px;cursor:pointer">Retry</button></div>';
+      return;
+    }
     renderTournament(data);
     tournamentLoaded = true;
   } catch(e) {
     document.getElementById('tournament-loading').innerHTML =
-      '<div style="color:var(--danger)">⚠️ Could not load tournament data. Try refreshing.</div>';
+      '<div style="color:var(--danger);padding:20px;font-size:0.8rem">⚠️ ' + e.message + '<br><br><button onclick="tournamentLoaded=false;loadBracket()" style="margin-top:10px;padding:8px 16px;background:var(--primary);border:none;color:#fff;border-radius:7px;cursor:pointer">Retry</button></div>';
   }
 }
 
@@ -554,50 +556,61 @@ function renderTournament(data) {
   document.getElementById('tournament-loading').classList.add('hidden');
   document.getElementById('tournament-content').classList.remove('hidden');
 
-  // Recent results
+  // ---- Recent results ----
   const recentDiv = document.getElementById('recent-results');
   const matches   = data.recentMatches || [];
   if (!matches.length) {
-    recentDiv.innerHTML = '<div class="no-tournament">No recent results yet.</div>';
+    recentDiv.innerHTML = '<div class="no-tournament">No matches played yet.</div>';
   } else {
     recentDiv.innerHTML = matches.map(m => {
-      const homeWin  = m.homeScore > m.awayScore;
-      const awayWin  = m.awayScore > m.homeScore;
-      const dateStr  = m.date ? new Date(m.date).toLocaleDateString('en-KE',{day:'numeric',month:'short'}) : '';
+      // Use result field — not score numbers
+      const homeWin  = m.result === 'team1';
+      const awayWin  = m.result === 'team2';
+      const isDraw   = m.result === 'draw';
+      const scoreLabel = homeWin ? 'W – L' : awayWin ? 'L – W' : isDraw ? 'D – D' : 'vs';
+      const scoreColor = 'color:var(--warning)';
+      let dateStr = '';
+      if (m.date) {
+        try {
+          const parts = m.date.split('-');
+          if (parts.length === 3) {
+            const dt = new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2]));
+            dateStr = dt.toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'});
+          }
+        } catch(e) {}
+      }
       return `
         <div class="result-card">
-          <div class="rc-stage">${esc(m.stage)}${m.group ? ' · Group ' + m.group : ''}</div>
+          <div class="rc-stage">${esc(m.stage||'')}${m.group ? ' · Group '+m.group : ''}</div>
           <div class="rc-match">
-            <div class="rc-team" style="${homeWin?'color:var(--success)':awayWin?'opacity:0.5':''}">${esc(m.homeTeam)}</div>
-            <div class="rc-score">${m.homeScore} – ${m.awayScore}</div>
-            <div class="rc-team right" style="${awayWin?'color:var(--success)':homeWin?'opacity:0.5':''}">${esc(m.awayTeam)}</div>
+            <div class="rc-team" style="${homeWin?'color:var(--success)':awayWin?'opacity:0.45':''}">${esc(m.homeTeam||'')}</div>
+            <div class="rc-score" style="${scoreColor}">${scoreLabel}</div>
+            <div class="rc-team right" style="${awayWin?'color:var(--success)':homeWin?'opacity:0.45':''}">${esc(m.awayTeam||'')}</div>
           </div>
-          <div class="rc-date">${dateStr}</div>
+          ${dateStr ? `<div class="rc-date">${dateStr}</div>` : ''}
         </div>`;
     }).join('');
   }
 
-  // Overall standings table
+  // ---- Overall standings ----
   const tbody     = document.getElementById('standings-body');
   const standings = data.standings || [];
   if (!standings.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)">No standings data yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">No matches recorded yet.</td></tr>';
     return;
   }
   tbody.innerHTML = standings.map((row, idx) => {
-    const pos     = idx + 1;
+    const pos      = idx + 1;
     const posClass = pos === 1 ? 'pos-1' : pos === 2 ? 'pos-2' : pos === 3 ? 'pos-3' : '';
-    const gdColor  = row.goalDiff > 0 ? 'color:var(--success)' : row.goalDiff < 0 ? 'color:var(--danger)' : '';
     return `<tr>
       <td><span class="pos-badge ${posClass}">${pos}</span></td>
-      <td style="font-weight:600">${esc(row.team)}</td>
-      <td class="num"><span class="grp-badge">${esc(row.group)}</span></td>
-      <td class="num">${row.played}</td>
-      <td class="num">${row.won}</td>
-      <td class="num">${row.draw}</td>
-      <td class="num">${row.lost}</td>
-      <td class="num" style="${gdColor}">${row.goalDiff > 0 ? '+' : ''}${row.goalDiff}</td>
-      <td class="pts">${row.points}</td>
+      <td style="font-weight:600;font-size:0.78rem">${esc(row.team||'')}</td>
+      <td class="num"><span class="grp-badge">${esc(row.group||'')}</span></td>
+      <td class="num">${row.played||0}</td>
+      <td class="num" style="color:var(--success)">${row.won||0}</td>
+      <td class="num" style="color:var(--warning)">${row.draw||0}</td>
+      <td class="num" style="color:var(--danger)">${row.lost||0}</td>
+      <td class="pts">${row.points||0}</td>
     </tr>`;
   }).join('');
 }
