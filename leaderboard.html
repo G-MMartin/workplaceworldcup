@@ -278,6 +278,24 @@
     .sex-toggle { display:flex; gap:6px; margin-bottom:14px; }
     .sex-toggle-btn { flex:1; padding:7px 10px; border-radius:8px; font-size:0.74rem; font-weight:700; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--muted); text-align:center; transition:all 0.2s; }
     .sex-toggle-btn.active { background:var(--primary-dark); border-color:var(--primary-light); color:#fff; }
+
+    /* Search box */
+    .search-wrap { margin-bottom: 14px; }
+    .search-wrap input {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.9rem;
+      padding: 12px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-wrap input:focus { border-color: var(--primary-light); }
+    .search-wrap input::placeholder { color: var(--muted); }
+    .lb-card.search-match { border-color: var(--primary-light); box-shadow: 0 0 0 1px rgba(244,195,33,0.3); }
+    .lb-card.search-hidden { display: none; }
     /* ===== TABS ===== */
     .lb-tabs { display:flex; background:var(--surface); border-bottom:1px solid var(--border); }
     .lb-tab-btn { flex:1; padding:12px 8px; background:none; border:none; color:var(--muted); font-size:0.78rem; font-weight:700; cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s; }
@@ -388,6 +406,10 @@
         <div class="bonus-item">🏆 Champ <span>+12</span></div>
       </div>
     </div>
+    <div class="search-wrap">
+      <input type="text" id="standings-search" placeholder="🔍 Search your name..." oninput="filterStandingsSearch(this.value)">
+    </div>
+    <div id="search-empty" class="empty hidden">No matching names found.</div>
     <div id="podium" class="podium hidden"></div>
     <div id="loading" class="loading"><div class="loading-spinner"></div><div>Loading standings...</div></div>
     <div id="empty" class="empty hidden">No players registered yet. Be the first! 🚀</div>
@@ -518,6 +540,7 @@ function setStandingsView(view, btn) {
   // Sex sub-toggle only relevant for Individuals
   document.getElementById('standings-sex-toggle').style.display = view === 'individual' ? 'flex' : 'none';
   if (view !== 'individual') standingsSex = 'all';
+  clearStandingsSearch();
   renderLeaderboard({ leaderboard: fullLeaderboard, lastUpdated: lastLbUpdate });
 }
 
@@ -525,7 +548,29 @@ function setStandingsSexFilter(sex, btn) {
   standingsSex = sex;
   document.querySelectorAll('#standings-sex-toggle .sex-toggle-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  clearStandingsSearch();
   renderLeaderboard({ leaderboard: fullLeaderboard, lastUpdated: lastLbUpdate });
+}
+
+function clearStandingsSearch() {
+  const input = document.getElementById('standings-search');
+  if (input) input.value = '';
+  document.getElementById('search-empty').classList.add('hidden');
+}
+
+function filterStandingsSearch(term) {
+  const q = term.trim().toLowerCase();
+  const cards = document.querySelectorAll('#leaderboard-list .lb-card');
+  let visibleCount = 0;
+
+  cards.forEach(card => {
+    const matches = !q || (card.dataset.name || '').includes(q);
+    card.classList.toggle('search-hidden', !matches);
+    card.classList.toggle('search-match', !!q && matches);
+    if (matches) visibleCount++;
+  });
+
+  document.getElementById('search-empty').classList.toggle('hidden', !(q && visibleCount === 0));
 }
 
 let lastLbUpdate = null;
@@ -582,6 +627,7 @@ function renderLeaderboard(data) {
     const rank = idx + 1;
     const card = document.createElement('div');
     card.className = 'lb-card';
+    card.dataset.name = player.name.toLowerCase();
     card.innerHTML = `
       <div class="lb-row" onclick="togglePicks(this)">
         <div class="lb-rank ${rank<=3?'rank-'+rank:''}">${rank}</div>
@@ -604,6 +650,10 @@ function renderLeaderboard(data) {
       </div>`;
     list.appendChild(card);
   });
+
+  // Re-apply any active search filter after re-render (e.g. on auto-refresh)
+  const searchInput = document.getElementById('standings-search');
+  if (searchInput && searchInput.value) filterStandingsSearch(searchInput.value);
 }
 
 function togglePicks(row) {
