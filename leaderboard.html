@@ -333,6 +333,8 @@
     .upcoming-row .ur-team.right { text-align:right; }
     .upcoming-row .ur-vs { font-size:0.68rem; color:var(--muted); flex-shrink:0; padding:0 4px; }
     .upcoming-row .ur-time { font-size:0.6rem; color:var(--primary-light); width:38px; flex-shrink:0; text-align:right; }
+    .show-more-btn { text-align:center; font-size:0.7rem; font-weight:700; color:var(--primary-light); padding:8px; cursor:pointer; user-select:none; border-radius:8px; background:var(--surface); border:1px solid var(--border); margin-top:2px; }
+    .show-more-btn:hover { background:var(--card); }
 
     /* Overall standings table */
     .standings-table { width:100%; border-collapse:collapse; font-size:0.75rem; }
@@ -469,10 +471,8 @@
     <div id="tournament-content" class="hidden">
       <div id="tournament-updated" style="text-align:center;font-size:0.68rem;color:var(--muted);margin-bottom:10px"></div>
       <div class="section-hdr2">🕐 Previous Match Day Results</div>
-      <div id="recent-day-label" style="font-size:0.68rem;color:var(--primary-light);margin-bottom:6px;font-weight:700"></div>
       <div id="recent-results"></div>
       <div class="section-hdr2">📅 Upcoming Match Day Fixtures</div>
-      <div id="upcoming-day-label" style="font-size:0.68rem;color:var(--primary-light);margin-bottom:6px;font-weight:700"></div>
       <div id="upcoming-fixtures"></div>
       <div class="section-hdr2">📋 Overall Group Standings</div>
       <div style="overflow-x:auto">
@@ -760,52 +760,48 @@ function renderTournament(data) {
   }
 
   // ---- Recent results (single UTC matchday, times shown in EAT) ----
-  const recentDiv   = document.getElementById('recent-results');
-  const recentLabel = document.getElementById('recent-day-label');
-  const matches      = data.recentMatches || [];
+  const recentDiv = document.getElementById('recent-results');
+  const matches   = data.recentMatches || [];
   if (!matches.length) {
     recentDiv.innerHTML = '<div class="no-tournament">No matches played yet.</div>';
-    recentLabel.textContent = '';
   } else {
-    recentLabel.textContent = formatDayLabel(matches[0].date) + ' (EAT)';
-    recentDiv.innerHTML = matches.map(m => {
-        const hasScore = m.homeScore !== null && m.awayScore !== null;
-        const homeWin  = hasScore ? m.homeScore > m.awayScore : m.result === 'team1';
-        const awayWin  = hasScore ? m.awayScore > m.homeScore : m.result === 'team2';
-        const scoreStr = hasScore ? `${m.homeScore} – ${m.awayScore}` : (m.result === 'draw' ? 'D – D' : m.result === 'team1' ? 'W – L' : m.result === 'team2' ? 'L – W' : 'vs');
-        const scoreColor = (!homeWin && !awayWin) ? 'var(--warning)' : 'var(--success)';
-        const stageLabel = m.group ? `Grp ${m.group}` : (m.stage || '');
-        return `
-          <div class="result-row">
-            <div class="rr-stage">${esc(stageLabel)}</div>
-            <div class="rr-team" style="${homeWin?'color:var(--success)':awayWin?'opacity:0.45':''}">${esc(m.homeTeam)}</div>
-            <div class="rr-score" style="color:${scoreColor}">${scoreStr}</div>
-            <div class="rr-team right" style="${awayWin?'color:var(--success)':homeWin?'opacity:0.45':''}">${esc(m.awayTeam)}</div>
-            <div class="rr-date">${m.time||''}</div>
-          </div>`;
-      }).join('');
+    const rows = matches.map(m => {
+      const hasScore = m.homeScore !== null && m.awayScore !== null;
+      const homeWin  = hasScore ? m.homeScore > m.awayScore : m.result === 'team1';
+      const awayWin  = hasScore ? m.awayScore > m.homeScore : m.result === 'team2';
+      const scoreStr = hasScore ? `${m.homeScore} – ${m.awayScore}` : (m.result === 'draw' ? 'D – D' : m.result === 'team1' ? 'W – L' : m.result === 'team2' ? 'L – W' : 'vs');
+      const scoreColor = (!homeWin && !awayWin) ? 'var(--warning)' : 'var(--success)';
+      const stageLabel = m.group ? `Grp ${m.group}` : (m.stage || '');
+      return `
+        <div class="result-row">
+          <div class="rr-stage">${esc(stageLabel)}</div>
+          <div class="rr-team" style="${homeWin?'color:var(--success)':awayWin?'opacity:0.45':''}">${esc(m.homeTeam)}</div>
+          <div class="rr-score" style="color:${scoreColor}">${scoreStr}</div>
+          <div class="rr-team right" style="${awayWin?'color:var(--success)':homeWin?'opacity:0.45':''}">${esc(m.awayTeam)}</div>
+          <div class="rr-date">${m.time||''}</div>
+        </div>`;
+    });
+    renderExpandableRows(recentDiv, rows);
   }
 
   // ---- Upcoming fixtures (single nearest UTC matchday, EAT times) ----
-  const upcomingDiv   = document.getElementById('upcoming-fixtures');
-  const upcomingLabel = document.getElementById('upcoming-day-label');
-  const upcoming       = data.upcomingMatches || [];
+  const upcomingDiv = document.getElementById('upcoming-fixtures');
+  const upcoming    = data.upcomingMatches || [];
   if (!upcoming.length) {
     upcomingDiv.innerHTML = '<div class="no-tournament">No upcoming fixtures cached yet.</div>';
-    upcomingLabel.textContent = '';
   } else {
-    upcomingLabel.textContent = formatDayLabel(upcoming[0].date) + ' (EAT)';
-    upcomingDiv.innerHTML = upcoming.map(m => {
-        const stageLabel = m.group ? `Grp ${m.group}` : (m.stage || '');
-        return `
-          <div class="upcoming-row">
-            <div class="ur-stage">${esc(stageLabel)}</div>
-            <div class="ur-team">${esc(m.homeTeam)}</div>
-            <div class="ur-vs">vs</div>
-            <div class="ur-team right">${esc(m.awayTeam)}</div>
-            <div class="ur-time">${m.time||''}</div>
-          </div>`;
-      }).join('');
+    const rows = upcoming.map(m => {
+      const stageLabel = m.group ? `Grp ${m.group}` : (m.stage || '');
+      return `
+        <div class="upcoming-row">
+          <div class="ur-stage">${esc(stageLabel)}</div>
+          <div class="ur-team">${esc(m.homeTeam)}</div>
+          <div class="ur-vs">vs</div>
+          <div class="ur-team right">${esc(m.awayTeam)}</div>
+          <div class="ur-time">${m.time||''}</div>
+        </div>`;
+    });
+    renderExpandableRows(upcomingDiv, rows);
   }
 
   // ---- Overall standings ----
@@ -1047,12 +1043,29 @@ function esc(str) {
   return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function formatDayLabel(dateStr) {
-  if (!dateStr) return '';
-  try {
-    const [y,mo,d] = dateStr.split('-').map(Number);
-    return new Date(y,mo-1,d).toLocaleDateString('en-KE',{weekday:'long',day:'numeric',month:'short'});
-  } catch(e) { return ''; }
+// Shows the first 3 rows, collapses the rest behind a "Show More" toggle.
+function renderExpandableRows(containerEl, rowsHtml) {
+  if (rowsHtml.length <= 3) {
+    containerEl.innerHTML = rowsHtml.join('');
+    return;
+  }
+  const visible = rowsHtml.slice(0, 3).join('');
+  const hidden  = rowsHtml.slice(3).join('');
+  const extra   = rowsHtml.length - 3;
+  const uid     = 'exp_' + Math.random().toString(36).substr(2, 9);
+
+  containerEl.innerHTML = `
+    ${visible}
+    <div id="${uid}" class="hidden">${hidden}</div>
+    <div class="show-more-btn" data-count="${extra}" onclick="toggleShowMore('${uid}', this)">Show ${extra} More ▾</div>`;
+}
+
+function toggleShowMore(id, btn) {
+  const el      = document.getElementById(id);
+  const count   = btn.dataset.count;
+  const wasHidden = el.classList.contains('hidden');
+  el.classList.toggle('hidden');
+  btn.textContent = wasHidden ? 'Show Less ▴' : `Show ${count} More ▾`;
 }
 
 // Init
