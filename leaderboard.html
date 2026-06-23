@@ -3,10 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#000000">
   <title>WC2026 Workplace Game — Leaderboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Quintessential&display=swap" rel="stylesheet">
   <style>
     :root {
+      color-scheme: dark;
       --primary:       #f4c321;
       --primary-light: #ffd84d;
       --primary-dark:  #a8830f;
@@ -932,7 +935,7 @@ function renderStats(data) {
             <span class="psr-tag draw"  onclick="openMatchModal(${i},'drawn')" >➖ ${drawn} Draw</span>
             <span class="psr-tag lost"  onclick="openMatchModal(${i},'lost')"  >❌ ${lost} Lost</span>
             <span class="psr-tag upset" onclick="openMatchModal(${i},'upset')" >⚡ ${upset} Upset</span>
-            ${bonus > 0 ? `<span class="psr-tag bonus">🎁 +${bonus} Bonus</span>` : ''}
+            ${bonus > 0 ? `<span class="psr-tag bonus" onclick="openMatchModal(${i},'bonus')">🎁 +${bonus} Bonus</span>` : ''}
           </div>
         </div>`;
     }).join('');
@@ -964,7 +967,8 @@ function openMatchModal(playerIdx, type) {
     won:   { key:'wonMatches',   label:'✅ Won Matches',   cls:'won'  },
     drawn: { key:'drawnMatches', label:'➖ Drawn Matches', cls:'draw' },
     lost:  { key:'lostMatches',  label:'❌ Lost Matches',  cls:'lost' },
-    upset: { key:'upsetMatches', label:'⚡ Upset Wins',    cls:'upset'}
+    upset: { key:'upsetMatches', label:'⚡ Upset Wins',    cls:'upset'},
+    bonus: { key:'bonusMatches', label:'🎁 Bonus Points',  cls:'bonus'}
   };
   const t       = typeMap[type];
   const matches = player[t.key] || [];
@@ -975,6 +979,15 @@ function openMatchModal(playerIdx, type) {
   const body = document.getElementById('modal-body');
   if (!matches.length) {
     body.innerHTML = `<div class="modal-empty">No ${type} matches yet.</div>`;
+  } else if (type === 'bonus') {
+    body.innerHTML = matches.map(m => `
+      <div class="modal-match-item">
+        <div class="mmi-teams">${esc(m.pickedTeam)}</div>
+        <div class="mmi-meta">
+          <span>${esc(m.stage||'')} stage bonus</span>
+          <span class="mmi-pts won">+${m.pts} pts</span>
+        </div>
+      </div>`).join('');
   } else {
     body.innerHTML = matches.map(m => {
       const ptsClass = type === 'won' || type === 'upset' ? 'won' : type === 'drawn' ? 'draw' : 'lost';
