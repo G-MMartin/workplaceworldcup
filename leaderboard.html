@@ -1144,6 +1144,7 @@ const STAGE_DISPLAY_ORDER = {
 
 // Resolve the FIFA M-number for any bracket row.
 function resolveMatchNumber(m) {
+  if (m._synthNum) return m._synthNum;
   if (m.Stage === 'R32') {
     var t1 = m.Team1, t2 = m.Team2;
     for (var i = 0; i < R32_MATCH_NUMBERS.length; i++) {
@@ -1181,10 +1182,25 @@ const STAGE_NEXT = { R32:'R16', R16:'QF', QF:'SF', SF:'Final' };
 
 function getStageMatches(stage) {
   let matches = bracketDataFull.filter(b => b.Stage === stage);
-  const order = STAGE_DISPLAY_ORDER[stage];
-  if (order) {
+  const order = STAGE_DISPLAY_ORDER[stage] || [];
+
+  // If real data is missing (or partial) for this stage, synthesize the
+  // remaining matches from the fixed bracket structure so the column and
+  // its W-code placeholders render even before any results exist. Real
+  // rows always take precedence; synthetic rows only fill the gaps.
+  if (stage !== 'R32') {
+    const haveNums = new Set(matches.map(resolveMatchNumber).filter(Boolean));
+    order.forEach(mNum => {
+      if (!haveNums.has(mNum)) {
+        matches.push({ Stage:stage, Position:(mNum - (STAGE_MATCH_START[stage]||mNum) + 1), Team1:'TBD', Team2:'TBD', Winner:'', Date:'', _synthNum:mNum });
+      }
+    });
+  }
+
+  if (order.length) {
     matches = matches.slice().sort((a,b) => {
-      const ma = resolveMatchNumber(a), mb = resolveMatchNumber(b);
+      const ma = a._synthNum || resolveMatchNumber(a);
+      const mb = b._synthNum || resolveMatchNumber(b);
       const ia = ma ? order.indexOf(ma) : -1;
       const ib = mb ? order.indexOf(mb) : -1;
       const sa = ia === -1 ? 999 : ia;
@@ -1208,19 +1224,17 @@ function renderKnockoutBracket() {
   }
   document.getElementById('bracket-scroll-wrap').classList.remove('hidden');
 
-  // Default to the furthest-along stage that has data
-  if (!currentBracketStage || !bracketDataFull.some(b => b.Stage === currentBracketStage)) {
+  // Default to the furthest-along stage that has REAL data (so people
+  // land on what's currently happening); fall back to R32.
+  if (!currentBracketStage) {
     const furthest = [...BRACKET_STAGE_ORDER].reverse().find(s => bracketDataFull.some(b => b.Stage === s));
     currentBracketStage = furthest || 'R32';
   }
 
-  // Pills — one per stage that has data
+  // Pills — all stages are clickable, since later rounds render from the
+  // fixed bracket structure (W-code placeholders) even before results exist.
   const pillsDiv = document.getElementById('bracket-stage-pills');
   pillsDiv.innerHTML = BRACKET_STAGE_ORDER.map(stage => {
-    const hasData = bracketDataFull.some(b => b.Stage === stage);
-    if (!hasData) {
-      return `<div class="view-toggle-btn" style="opacity:0.3;pointer-events:none">${BRACKET_STAGE_SHORT[stage]}</div>`;
-    }
     const activeCls = (stage === currentBracketStage) ? ' active' : '';
     return `<div class="view-toggle-btn${activeCls}" data-stage="${stage}" onclick="selectBracketStage('${stage}')">${BRACKET_STAGE_SHORT[stage]}</div>`;
   }).join('');
