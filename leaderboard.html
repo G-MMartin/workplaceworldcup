@@ -1245,11 +1245,10 @@ function renderKnockoutBracket() {
 function renderBracketColumns() {
   const colsDiv = document.getElementById('bracket-columns');
   const stage   = currentBracketStage;
-  const next    = STAGE_NEXT[stage]; // the round this one feeds into (may be undefined for Final/3rd)
 
   let cols = '';
 
-  // Left column: the selected stage
+  // Left column: always the selected stage
   const leftMatches = getStageMatches(stage);
   cols += `
     <div class="bracket-col" id="bracket-col-${stage}">
@@ -1257,37 +1256,57 @@ function renderBracketColumns() {
       ${leftMatches.map(renderBracketMatchRow).join('')}
     </div>`;
 
-  // Right column: the round it feeds into (if any), with extra top
-  // spacing so each next-round match sits centred against its feeder pair
-  if (next) {
-    const rightMatches = getStageMatches(next);
-    cols += `
-      <div class="bracket-col bracket-col-next" id="bracket-col-${next}">
-        <div class="bracket-col-title">${BRACKET_STAGE_LABELS[next] || next}</div>
-        ${rightMatches.map((m,i) => `<div class="bracket-next-slot">${renderBracketMatchRow(m)}</div>`).join('')}
-      </div>`;
-  }
-
-  // For SF, also surface the Final + 3rd place as the "next" since SF feeds both
+  // Right column depends on the stage:
   if (stage === 'SF') {
+    // SF feeds only the Final here (3rd place lives on its own pill),
+    // vertically centred between the two semi-final matches.
     const finalM = getStageMatches('Final');
-    const thirdM = getStageMatches('3rd');
-    cols = '';
-    cols += `
-      <div class="bracket-col" id="bracket-col-SF">
-        <div class="bracket-col-title">${BRACKET_STAGE_LABELS['SF']}</div>
-        ${leftMatches.map(renderBracketMatchRow).join('')}
-      </div>`;
     cols += `
       <div class="bracket-col bracket-col-next">
         <div class="bracket-col-title">${BRACKET_STAGE_LABELS['Final']}</div>
         ${finalM.map(renderBracketMatchRow).join('')}
-        <div class="bracket-col-title" style="margin-top:14px">${BRACKET_STAGE_LABELS['3rd']}</div>
-        ${thirdM.map(renderBracketMatchRow).join('')}
       </div>`;
+  } else if (stage === 'Final') {
+    // Tournament ends — right column is the Champion placeholder.
+    cols += renderWinnerColumn('🏆 Champion', 104);
+  } else if (stage === '3rd') {
+    // Right column is the 3rd-place winner placeholder.
+    cols += renderWinnerColumn('🥉 3rd Place Winner', 103);
+  } else {
+    // Normal rounds: right column is the next round, centred against feeders.
+    const next = STAGE_NEXT[stage];
+    if (next) {
+      const rightMatches = getStageMatches(next);
+      cols += `
+        <div class="bracket-col bracket-col-next" id="bracket-col-${next}">
+          <div class="bracket-col-title">${BRACKET_STAGE_LABELS[next] || next}</div>
+          ${rightMatches.map(m => `<div class="bracket-next-slot">${renderBracketMatchRow(m)}</div>`).join('')}
+        </div>`;
+    }
   }
 
   colsDiv.innerHTML = cols;
+}
+
+// Right-hand "winner" column for the terminal stages (Final / 3rd).
+// Shows the real winner once decided, otherwise the W/L placeholder code.
+function renderWinnerColumn(title, matchNum) {
+  const row = bracketDataFull.find(b => resolveMatchNumber(b) === matchNum);
+  let label;
+  if (row && row.Winner) {
+    label = `<span class="bmr-team winner">${esc(row.Winner)} 🏆</span>`;
+  } else {
+    const code = (matchNum === 103) ? 'W103' : 'W104';
+    label = `<span style="color:var(--muted);font-style:italic">${code}</span>`;
+  }
+  return `
+    <div class="bracket-col bracket-col-next" style="justify-content:center">
+      <div class="bracket-col-title">${title}</div>
+      <div class="bracket-match-row" style="border-color:var(--primary);border-width:1px">
+        <div class="bmr-num">M${matchNum} Winner</div>
+        <div class="bmr-team">${label}</div>
+      </div>
+    </div>`;
 }
 
 function selectBracketStage(stage) {
