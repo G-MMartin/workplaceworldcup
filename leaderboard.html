@@ -1323,6 +1323,27 @@ function selectBracketStage(stage) {
   renderBracketColumns();
 }
 
+// Given a feeder code like "W73" or "L101", find the match it refers
+// to and return the real team name if that match has been decided:
+//   W## -> the winner of match ##
+//   L## -> the loser of match ## (used by the 3rd-place match, fed by
+//          the two losing semi-finalists)
+// Returns null if the match isn't decided yet, so the caller can fall
+// back to showing the raw code. This is how the bracket flows forward
+// on its own — we never need the API to publish the next round; the
+// winner of each match IS the team in the corresponding next slot.
+function resolveFeederCode(code) {
+  if (!code) return null;
+  const type = code.charAt(0);           // 'W' or 'L'
+  const num  = parseInt(code.slice(1), 10);
+  if (!num) return null;
+  const row = bracketDataFull.find(b => resolveMatchNumber(b) === num);
+  if (!row || !row.Winner) return null;  // match not decided yet
+  if (type === 'W') return row.Winner;
+  // 'L' -> the team that is NOT the winner
+  return (row.Winner === row.Team1) ? row.Team2 : row.Team1;
+}
+
 function renderBracketMatchRow(m) {
   const hasWinner = !!m.Winner;
   const t1Class = hasWinner ? (m.Winner === m.Team1 ? 'winner' : 'loser') : '';
@@ -1331,11 +1352,16 @@ function renderBracketMatchRow(m) {
   const matchNum = resolveMatchNumber(m);
   const feeders  = (matchNum && MATCH_FEEDERS[matchNum]) ? MATCH_FEEDERS[matchNum] : null;
 
-  // For an undecided slot: show real team name if published, otherwise
-  // the FIFA-style W/L code of the match that feeds it.
+  // For a slot: show the real published team name if present; else try
+  // to resolve the feeder code to a real team (if that match is decided);
+  // else fall back to the raw W/L code as a placeholder.
   const slot = (team, idx) => {
     if (team && team !== 'TBD') return esc(team);
-    if (feeders && feeders[idx]) return `<span style="color:var(--muted);font-style:italic">${feeders[idx]}</span>`;
+    if (feeders && feeders[idx]) {
+      const resolved = resolveFeederCode(feeders[idx]);
+      if (resolved) return esc(resolved);
+      return `<span style="color:var(--muted);font-style:italic">${feeders[idx]}</span>`;
+    }
     return 'TBD';
   };
 
