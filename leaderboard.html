@@ -1581,7 +1581,30 @@ function toggleShowMore(id, btn) {
 
 // Init
 loadLeaderboard();
-setInterval(loadLeaderboard, 3 * 60 * 1000);
+
+// Auto-refresh keeps scores live, but it must never freeze the page or
+// disrupt what someone's doing. So we skip a refresh when:
+//   - the browser tab is hidden (no point re-rendering offscreen),
+//   - a search is active (don't wipe the filtered view),
+//   - a match modal is open,
+//   - a previous refresh is still running (no overlap).
+let _refreshing = false;
+function safeAutoRefresh() {
+  if (document.hidden) return;
+  if (_refreshing) return;
+  const fabInput = document.getElementById('fab-search-input');
+  const searchActive = (fabInput && fabInput.value.trim()) ||
+                       (document.getElementById('standings-search') && document.getElementById('standings-search').value.trim()) ||
+                       (document.getElementById('stats-search') && document.getElementById('stats-search').value.trim());
+  if (searchActive) return;
+  const modal = document.getElementById('match-modal');
+  if (modal && !modal.classList.contains('hidden')) return;
+
+  _refreshing = true;
+  Promise.resolve(loadLeaderboard()).finally(() => { _refreshing = false; });
+}
+setInterval(safeAutoRefresh, 3 * 60 * 1000);
+
 // The FAB element is defined just below this script, so wait until the
 // DOM is fully parsed before toggling its visibility on first load.
 if (document.readyState === 'loading') {
