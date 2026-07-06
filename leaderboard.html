@@ -1665,11 +1665,29 @@ function renderBracketColumns() {
 
   html += headerRow(BRACKET_STAGE_LABELS[stage], rightTitle);
 
-  const pairCount = Math.ceil(leftMatches.length / 2);
+  const pairCount = rightMatches.length || Math.ceil(leftMatches.length / 2);
   for (let i = 0; i < pairCount; i++) {
-    const a      = leftMatches[2*i];
-    const b      = leftMatches[2*i + 1];
     const feeder = rightMatches[i];
+
+    // Find this match's TRUE two feeders from MATCH_FEEDERS (the single
+    // source of truth) rather than assuming the i-th pair of left-side
+    // matches by array position. Positional pairing silently broke
+    // whenever a stage's real bracket adjacency wasn't simple left-to-right
+    // pairs — e.g. QF M98's real feeders are R16 M93/M94, and M99's are
+    // M91/M92, the reverse of what position would suggest.
+    let a = null, b = null;
+    const feederNum = feeder ? resolveMatchNumber(feeder) : null;
+    const parents = feederNum && MATCH_FEEDERS[feederNum] ? MATCH_FEEDERS[feederNum] : null;
+    if (parents) {
+      const numA = parseInt(parents[0].slice(1), 10);
+      const numB = parseInt(parents[1].slice(1), 10);
+      a = leftMatches.find(m => resolveMatchNumber(m) === numA) || null;
+      b = leftMatches.find(m => resolveMatchNumber(m) === numB) || null;
+    }
+    // Fallback for stages without a numeric feeder map (shouldn't normally
+    // hit, but keeps older data from rendering blank instead of degrading).
+    if (!a && !b) { a = leftMatches[2*i]; b = leftMatches[2*i + 1]; }
+
     const leftHtml  = (a ? renderBracketMatchRow(a) : '') + (b ? renderBracketMatchRow(b) : '');
     const rightHtml = feeder ? renderBracketMatchRow(feeder) : '';
     html += `
@@ -1747,7 +1765,13 @@ function renderBracketMatchRow(m) {
     if (feeders && feeders[idx]) {
       const resolved = resolveFeederCode(feeders[idx]);
       if (resolved) return esc(resolved);
-      return `<span style="color:var(--muted);font-style:italic">${feeders[idx]}</span>`;
+      // Not decided yet — show a readable placeholder, not the raw
+      // internal code (was leaking things like "W93" straight to the UI).
+      const code = feeders[idx];
+      const label = code.charAt(0) === 'W'
+        ? `Winner of M${code.slice(1)}`
+        : `Loser of M${code.slice(1)}`;
+      return `<span style="color:var(--muted);font-style:italic">${esc(label)}</span>`;
     }
     return 'TBD';
   };
