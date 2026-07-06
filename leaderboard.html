@@ -553,6 +553,7 @@
           <li><span class="tb-rank">2.</span>Highest total goal difference of picked teams</li>
           <li><span class="tb-rank">3.</span>Most match wins</li>
           <li><span class="tb-rank">4.</span>Most upset wins (Cat 3/4 correct picks)</li>
+          <li><span class="tb-rank">5.</span>If tied players are in the same branch/department, the one who registered first ranks higher (registration time shown in each player's Picked Teams panel). Branch/department is determined by HR.</li>
         </ul>
       </div>
     </div>
@@ -835,6 +836,7 @@ function rowToLeaderboardEntry(r) {
     gdSum: num(r.GDsum),
     winsCount: num(r.Wins),
     upsetWinsCount: num(r.Upsets),
+    registered: r.Registered || '',
     picks: { A:r.A, B:r.B, C:r.C, D:r.D, E:r.E, F:r.F, G:r.G, H:r.H, I:r.I, J:r.J, K:r.K, L:r.L }
   };
 }
@@ -945,7 +947,10 @@ function renderLeaderboard(data) {
         <div class="lb-expand">▾</div>
       </div>
       <div class="picks-panel">
-        <div class="picks-title">Picked Teams</div>
+        <div class="picks-title" style="display:flex;justify-content:space-between;align-items:baseline">
+          <span>Picked Teams</span>
+          ${player.registered ? `<span style="font-size:0.65rem;font-weight:400;color:var(--muted)">Registered: ${esc(player.registered)}</span>` : ''}
+        </div>
         <div class="picks-grid">
           ${GROUP_KEYS.map(g => {
             const team = player.picks[g]||'—';
